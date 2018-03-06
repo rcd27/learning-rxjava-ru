@@ -1,3 +1,158 @@
+### Что это такое
+
+Это конспект-перевод книги Томаса Нилда "Learning RxJava", 2017
+
+<ul>
+<img src="https://github.com/rcd27/workbook/blob/master/learning-rxjava/learning-rxjava.jpg" width="250">
+</ul>
+
+### Структура
+
+Для того, чтобы упростить навигацию по материалу, была сохранена оригинальная структура книги: все оглавления и заголовки остались в родном виде.
+
+```
+Chapter 2: Observables and Subscribers
+    The Observable
+        How Observables work
+        Using Observable.create()
+        Using Observable.just()
+    The Observer interface
+        Implementing and subscribing to an Observer
+        Shorthand Observers with lambdas
+    Cold versus hot Observables
+        Cold Observables
+        Hot Observables
+        ConnectableObservable
+    Other Observable sources
+        Observable.range()
+        Observable.interval()
+        Observable.future()
+        Observable.empty()
+        Observable.never()
+        Observable.error()
+        Observable.defer()
+        Observable.fromCallable()
+    Single, Completable, and Maybe
+        Single
+        Maybe
+        Completable
+    Disposing
+        Handling a Disposable within an Observer
+        Using CompositeDisposable
+        Handling Disposal with Observable.create()
+
+Chapter 3: Basic Operators
+    Suppressing operators
+        filter()
+        take()
+        skip()
+        takeWhile() and skipWhile()
+        distinct()
+        distinctUntilChanged()
+        elementAt()
+    Transforming operators
+        map()
+        cast()
+        startWith()
+        defaultIfEmpty()
+        switchIfEmpty()
+        sorted()
+        delay()
+        repeat()
+        scan()
+    Reducing operators
+        count()
+        reduce()
+        all()
+        any()
+        contains()
+    Collection operators
+        toList()
+        toSortedList()
+        toMap() and toMultiMap()
+        collect()
+    Error recovery operators
+        onErrorReturn() and onErrorReturnItem()
+        onErrorResumeNext()
+        retry()
+    Action operators
+        doOnNext(), doOnComplete(), and doOnError()
+        doOnSubscribe() and doOnDispose()
+        doOnSuccess()
+
+Chapter 4: Combining Observables
+    Merging
+        Observable.merge() and mergeWith()
+        flatMap()
+    Concatenation
+        Observable.concat() and concatWith()
+        concatMap()
+    Ambiguous
+    Zipping
+    Combine latest
+        withLatestFrom()
+    Grouping
+
+Chapter 5: Multicasting, Replaying, and Caching
+    Understanding multicasting
+        Multicasting with operators
+        When to multicast
+    Automatic connection
+        autoConnect()
+        refCount() and share()
+    Replaying and caching
+        Replaying
+        Caching
+    Subjects
+        PublishSubject
+        When to use Subjects
+        When Subjects go wrong
+        Serializing Subjects
+        BehaviorSubject
+        ReplaySubject
+        AsyncSubject
+        UnicastSubject
+
+Chapter 6: Concurrency and Parallelization
+    Why concurrency is necessary
+    Concurrency in a nutshell
+        Understanding parallelization
+    Introducing RxJava concurrency
+        Keeping an application alive
+    Understanding Schedulers
+        Computation
+        IO
+        New thread
+        Single
+        Trampoline
+        ExecutorService
+        Starting and shutting down Schedulers
+    Understanding subscribeOn()
+        Nuances of subscribeOn()
+    Understanding observeOn()
+        Using observeOn() for UI event threads
+        Nuances of observeOn()
+    Parallelization
+    unsubscribeOn()
+
+Chapter 7: Switching, Throttling, Windowing, and Buffering
+    Buffering
+        Fixed-size buffering
+        Time-based buffering
+        Boundary-based buffering
+    Windowing
+        Fixed-size windowing
+        Time-based windowing
+        Boundary-based windowing
+    Throttling
+        throttleLast() / sample()
+        throttleFirst()
+        throttleWithTimeout() / debounce()
+    Switching
+    Grouping keystrokes
+```
+-----
+
 ### Observables and Subscribers
 Фундаментальная идея в основе реактивного программирования: события - это данные, данные - это события.
 
