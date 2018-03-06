@@ -24,7 +24,7 @@
         - Cold Observables
         - Hot Observables
         - ConnectableObservable
-    - [Other Observable sources](#Другие-фабрики-для-создания-observable)
+    - [Other Observable sources](#Другие-фабрики-для-создания-Observable)
         - Observable.range()
         - Observable.interval()
         - Observable.future()
@@ -94,17 +94,17 @@
         - withLatestFrom()
     - [Grouping](#grouping)
 
-- [Chapter 5: Multicasting, Replaying, and Caching](#multicasting-replaying-caching)
+- [Chapter 5: Multicasting, Replaying, and Caching](#multicasting-replaying-and-caching)
     - [Understanding multicasting](#understanding-multicasting)
         - Multicasting with operators
         - When to multicast
-    - [Automatic connection]
+    - [Automatic connection](#automatic-connection)
         - autoConnect()
         - refCount() and share()
-    - [Replaying and caching]
+    - [Replaying and caching](#replaying-and-caching)
         - Replaying
         - Caching
-    - [Subjects]
+    - [Subjects](#subjects)
         - PublishSubject
         - When to use Subjects
         - When Subjects go wrong
@@ -114,13 +114,13 @@
         - AsyncSubject
         - UnicastSubject
 
-- [Chapter 6: Concurrency and Parallelization]
-    - [Why concurrency is necessary]
-    - [Concurrency in a nutshell]
+- [Chapter 6: Concurrency and Parallelization](#concurrency-and-parallelization)
+    - Why concurrency is necessary
+    - Concurrency in a nutshell
         - Understanding parallelization
-    - [Introducing RxJava concurrency]
+    - [Introducing RxJava concurrency](#introducing-rxjava-concurrency)
         - Keeping an application alive
-    - [Understanding Schedulers]
+    - [Understanding Schedulers](#understanding-schedulers)
         - Computation
         - IO
         - New thread
@@ -128,29 +128,29 @@
         - Trampoline
         - ExecutorService
         - Starting and shutting down Schedulers
-    - [Understanding subscribeOn()]
+    - [Understanding subscribeOn()](#understanding-subscribeon)
         - Nuances of subscribeOn()
-    - [Understanding observeOn()]
+    - [Understanding observeOn()](#understanding-observeon)
         - Using observeOn() for UI event threads
         - Nuances of observeOn()
-    - [Parallelization]
-    - [unsubscribeOn()]
+    - [Parallelization](#parallelization)
+    - [unsubscribeOn()](#unsubscribeon)
 
-- [Chapter 7: Switching, Throttling, Windowing, and Buffering]
-    - [Buffering]
+- [Chapter 7: Switching, Throttling, Windowing, and Buffering](#switching-throttling-windowing-and-buffering)
+    - [Buffering](#buffering)
         - Fixed-size buffering
         - Time-based buffering
         - Boundary-based buffering
-    - [Windowing]
+    - [Windowing](#windowning)
         - Fixed-size windowing
         - Time-based windowing
         - Boundary-based windowing
-    - [Throttling]
+    - [Throttling](#throttling)
         - throttleLast() / sample()
         - throttleFirst()
         - throttleWithTimeout() / debounce()
-    - [Switching]
-    - [Grouping keystrokes]
+    - [Switching](#switching)
+    - [Grouping keystrokes](#grouping-keystrokes)
 
 -----
 
@@ -225,7 +225,7 @@
 - `Completable` - придуман для того, чтобы выполнять какое-то действие. Ничего не получает. Есть `onError()` и `onComplete()`.
 
 #### Disposing
-Когда мы вызываем `subscribe()`, создаётся поток и обрабатывает emissions в цепочке. Для этого выделяются какие-то ресурсы. Слава Богу, `Observable` высвобождает эти ресурсы как только отрабатывает `onComplete()`. Но в случае, если у нас бесконечный или турбо долгий поток, нам может понадобится конкретный `dispose`.
+Когда мы вызываем `subscribe()`, создаётся поток и обрабатывает _emissions_ в цепочке. Для этого выделяются какие-то ресурсы. Слава Богу, `Observable` высвобождает эти ресурсы как только отрабатывает `onComplete()`. Но в случае, если у нас бесконечный или турбо долгий поток, нам может понадобится конкретный `dispose`.
 Короче, нельзя доверять **GC** чистку толстых потоков, надо диспозить самому, чтобы избежать мемори ликов.
 `Disposable` - это связующее звено между `Observable` и активным `Observer`. Можно вызывать его `dispose()` для того, чтобы прекратить эмитить элементы и высвободить все ресурсы, затраченные на их выпуск.
 
@@ -1021,5 +1021,84 @@ Observable.concat(source1, source2, source3)
 `debounce()`(==`throttleWithTimeout()`) - эффективный способ обработать излишне производительные источники (такие, как тупые юзеры, клацающие по кнопкам со скоростью бешенной обезьяны). Единственный недостаток: эти операторы задержат нужный нам эмишн на определённое время. Особо нетерпеливые пользователи заметят некоторую задержку, нам же надо убедиться, что эти говнюки перестали что-то вводить, верно? Так вот, чтобы избежать такой задержки, можно использовать `switchMap()`, о котором речь пойдёт чуть позже.
 
 #### Switching
+Есть такая мощная приблуда, как `switchMap()`. Её использование очень похоже на работу с `flatMap()`, но с некоторыми оговорками. Она будет эмитить _последний_ `Observable` из последнего эмишена и высвобождать выполнение всех остальных. Другими словами, `switchMap()` позволяет вам отменять выпуск `Observable`'ов и переключиться на новый, предотвращая тем самым ненужные вычисления.
+
+Допустим, у нас есть обзёрвабл, который эмитит пять стрингов. Причём делает это так, что каждый стринг выстреливает с какой-то задержкой.
+
+```java
+Observable<String> items = Observable.just("Раз", "Два", "Три", "Четыре", "Пять");
+
+// задержим каждый стринг, чтобы показать какие-то вычисления
+Observable<String> processedStrings = items.concatMap(s -> 
+                                            Observable.just(s)
+                                                .delay(/*рандомное число*/,
+                                                        TimeUnit.MILLISECONDS));
+
+processedStrings.subscribe(System.out::println);
+
+>output:
+    Раз
+    Два
+    Три
+    Четыре
+    Пять
+```
+
+Такой пример отработает по времени так, как ему вздумается.
+А нам, допустим, надо повторять эту работу каждые 5 секунд. При чём так, чтобы все элементы, выпущенные позднее - дропались (и у них при этом отработал `dispose()`). Это довольно просто сделать с помощью `switchMap()`. Создадим обзёрвабл, который эмитит каждые пять секунд. Затем, используем на него `switchMap()` к обзёрваблу, который хотим обработать (в данном случае `processedStrings`). Каждые пять секунд эмишн, идущий в `switchMap()` высвободит выполняемый на данный момент `Observable`, к которому он мапится. 
+
+```java
+// продолжение предыдущего примера
+Observable.interval(5, TimeUnit.SECONDS)
+    .switchMap(i -> processedStrings.doOnDispose(() -> /*напечатали в консоль*/)
+    .subscribe(/*напечатали в консоль*/);
+```
+
+В итоге в консоли каждые пять секунд будет написано сообщение о том, что такой-то `processedStrings` отработал `dispose()`. Помимо этого туда будут печататься наши "Раз", "Два", "Три", "Четыре" в зависимости от того, кто из них успел  заэмититься за эти пять секунд. После каждого сообщения о `dispose()` счёт будет начинаться сначала.
+
+Ешё раз, `switchMap()` полезен, когда надо отсечь выполнение ненужной работы. Это чаще всего полезно при работе с UI, где быстрые действия юзера создают бессмысленные запросы в сеть/базу и т.п. Для того, чтобы отменить такие запросы и заменить из на выполнение новой задачи, используйте `switchMap()`.
+
+> К примеру, ввод в EditText порождает запрос в сеть. В отличие от `debounce()`, который привнесёт некоторый затуп по отправлению запроса в сеть, `switchMap()` просто отменит предыдущие запросы (рассуждения автора конспекта)
+
+Для того, чтобы `switchMap()` работал эффективно, надо проследить, чтобы поток, который пушит в него элементы, не был занят в самом операторе. Это значит, что вам стоит использовать `observeOn()` или `subscribeOn` внутри оператора `switchMap()`. Если операции в свитчмапе дорогие, и `dispose()` занимает много времени, то неплохо бы вспомнить об `unsubscribeOn()`.
+
+Прикольный трюк: чтобы предотвратить выполнение какой-то бесконечной или очень затратной работы без старта новой - вернуть `Observable.empty()`. Автор книги приводит классный пример секундомера на `JavaFX`:
+
+```java
+...
+ToggleButton startStopButton = new ToggleButton();
+
+// мультикаст для toggleButton'овского состояния true/false
+Observable<Boolean> selectedStates = JavaFxObservable.valuesOf(
+                                        startStopButton.selectedProperty())
+                                            .publish()
+                                            .autoconnect(2);
+
+// Если использовать `switchMap()` с состоянием кнопки, это будет говорить
+// чейну, когда запускать `Observable.interval()`, а когда применять к нему
+// `dispose()`, переключаясь при этом на эмишн пустого обзёрвабла.
+selectedStates.switchMap(selected -> {
+                            if (selected) {
+                                return Observable.interval(1,                   
+                                        TimeUnit.MILLISECONDS);
+                            } else {
+                                return Observable.empty();
+                            })
+                .observeOn(JavaFxScheduler.platform())
+                .map(Object::toString)
+                .subscribe(label::setText());
+
+// Изменим текст кнопки в зависимости от её состояния
+selectedStates.subscribe(selected -> startStopButton.setText(
+                                        selected ? "STOP" : "START"));
+...
+```
+
+Кусок кода описывает примерно такое приложение-секундомер:
+
+![](start-stop.png)
+
+Нажатие кнопки будет запускать и останавливать секундомер, который отображается в миллисекундах. Обратите внимение, что `ToggleButton` эмитит `Boolean` `True`/`False` через обзёрвабл `selectedStates`. Мы применяем к этому обзёрваблу мультикаст для того, чтобы предотвратить дублирование `JavaFX`'овских `listener`'ов, ну и потому, что у нас два `Observer`'а. Первый обзёрвер использует `switchMap()`'у, которая будет переключаться между `Observable.interval()` и `Observable.empty()` в зависимости от значения `Boolean`. Так как `Observable.interval()` работает на _computation_ шедулере, мы должны вернуть результаты его работы обратно в мэйн поток `JavaFX`, для этого обозначили правильный `observeOn()`. Второй `Observer` просто меняет название кнопки на "START"/"STOP".
+
 #### Grouping keystrokes
 #### Summary
