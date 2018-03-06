@@ -12,7 +12,7 @@
 
 Для того, чтобы упростить навигацию по материалу, была сохранена оригинальная структура книги: все оглавления и заголовки остались в родном виде.
 
- - Chapter 2: [Observables and Subscribers](#Observables and Subscribers)
+ - Chapter 2: [Observables and Subscribers](#observables-and-subscribers)
     - [The Observable](#`Observable`)
         - How Observables work
         - Using Observable.create()
