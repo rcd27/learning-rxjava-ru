@@ -12,19 +12,19 @@
 
 Для того, чтобы упростить навигацию по материалу, была сохранена оригинальная структура книги: все оглавления и заголовки остались в родном виде.
 
- - Chapter 2: [Observables and Subscribers](#observables-and-subscribers)
-    - [The Observable](#`Observable`)
+ - [Chapter 2: Observables and Subscribers](#observables-and-subscribers)
+    - [The Observable](#observable)
         - How Observables work
         - Using Observable.create()
         - Using Observable.just()
-    - The [Observer interface](#Интерфейс `Observer`)
+    - [The Observer interface](#Интерфейс-observer)
         - Implementing and subscribing to an Observer
         - Shorthand Observers with lambdas
-    - [Cold versus hot Observables](#Cold vs Hot)
+    - [Cold versus hot Observables](cold-vs-hot)
         - Cold Observables
         - Hot Observables
         - ConnectableObservable
-    - [Other Observable sources](#Другие фабрики для создания Observable)
+    - [Other Observable sources](#Другие-фабрики-для-создания-observable)
         - Observable.range()
         - Observable.interval()
         - Observable.future()
@@ -33,11 +33,11 @@
         - Observable.error()
         - Observable.defer()
         - Observable.fromCallable()
-    - [Single, Completable, and Maybe](#Single, Completable, Maybe)
+    - [Single, Completable, and Maybe](#single-completable-maybe)
         - Single
         - Maybe
         - Completable
-    - [Disposing](#Disposing)
+    - [Disposing](#disposing)
         - Handling a Disposable within an Observer
         - Using CompositeDisposable
         - Handling Disposal with Observable.create()
