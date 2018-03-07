@@ -152,6 +152,25 @@
     - [Switching](#switching)
     - [Grouping keystrokes](#grouping-keystrokes)
 
+- [Chapter 8: Flowables and Backpressure](#flowables-and-backpressure)
+    - [Understanding backpressure](#understanding-backpressure)
+        - An example that needs backpressure
+        - Introducing the Flowable
+        - When to use Flowables and backpressure
+            - Use an Observable If...
+            - Use a Flowable If...
+    - [Understanding the Flowable and Subscriber](#understanding-the-flowable-and-subscriber)
+        The Subscriber
+    - [Creating a Flowable](#creating-a-flowable)
+        Using Flowable.create() and BackpressureStrategy
+        Turning an Observable into a Flowable (and vice-versa)
+    - [Using onBackpressureXXX() operators](#using-onbackpressurexxx-operators)
+        - onBackPressureBuffer()
+        - onBackPressureLatest()
+        - onBackPressureDrop()
+    - [Using Flowable.generate()]
+    - [Summary]
+
 -----
 
 ### Observables and Subscribers
@@ -1101,4 +1120,58 @@ selectedStates.subscribe(selected -> startStopButton.setText(
 Нажатие кнопки будет запускать и останавливать секундомер, который отображается в миллисекундах. Обратите внимение, что `ToggleButton` эмитит `Boolean` `True`/`False` через обзёрвабл `selectedStates`. Мы применяем к этому обзёрваблу мультикаст для того, чтобы предотвратить дублирование `JavaFX`'овских `listener`'ов, ну и потому, что у нас два `Observer`'а. Первый обзёрвер использует `switchMap()`'у, которая будет переключаться между `Observable.interval()` и `Observable.empty()` в зависимости от значения `Boolean`. Так как `Observable.interval()` работает на _computation_ шедулере, мы должны вернуть результаты его работы обратно в мэйн поток `JavaFX`, для этого обозначили правильный `observeOn()`. Второй `Observer` просто меняет название кнопки на "START"/"STOP".
 
 #### Grouping keystrokes
+В завершении этой главы мы попробуем применить всё, что в ней было освещено на примере с нажатием клавиш. Достаточно распространённый кейс (к примеру, юзер вводит что-то в поиск и нам надо сразу же переключиться на элемент с наиболее совпадающим именем). Задача: сгруппировать эти нажатия в `String`'и без всякой задержки.
+
+В качестве примера опять будет взят `JavaFX` с `RxJavaFX`.
+
+```java
+...
+Label typedTextLabel = new Label("");
+
+// Мультикаст, применённый к нажимаемым клавишам
+Observable<String> typedLetters = JavaFxObservable.eventsOf(
+                                                    scene, KeyEvent.KEY_TYPED)
+                                                    .map(KeyEvent::getCharacter)
+                                                    .share();
+
+// Сигнализирование того, что 300 мс ничего не происходило
+Observable<String> restSignal = typedLetters.throttleWithTimeout(
+                                                300, TimeUnit.MILLISECONDS)
+                                            .startWith("");
+
+// Теперь триггерим `switchMap()` на каждый период затишья для того, чтобы
+// объединить ранее нажатые клавиши в один стринг с помощью `scan()`
+restSignal.switchMap(s -> typedLetters.scan("", (rolling, next) ->
+                                        rolling + next))
+            .observeOn(JavaFxScheduler.platfomr())
+            .subscribe(s -> typedTextLabel.setText(s));
+...
+```
+
+Когда мы что-то печатаем, `Label` отображает саккумулированный `String`. Обратите внимание: если втечение 300 мс ничего не происходит, ввод сбрасывается и эмититься новый `scan()` с высвобождением предыдущего. Новый скан начинается с `""`. Такой приём может быть очень полезен в случае, когда нужно мгновенно искать что-то по запросу, выдавая предположения с автокомплитом.
+
+Разберём чуть подробнее, как это работает. У нас есть один `Observable`, который эмитит нажатие клавиш. К нему применён мультикаст, так как этот обзёрвабл использован два раза. Сначала он нужен для создания другого `Observable`, сигнализируещого о том, что вот уже 300 мс ничего не вводится с клавиатуры. Затем мы используем к этому сигнализирующему обзёрваблу `switchMap()`, передавая в него всё тот же клавишный обзёрвабл - так мы бесконечно группируем результативные нажатия в стринги с помощью `scan()` до тех пор, пока он не за`dispose()`'ится спустя 300 мс безактивности. Затем выстрелит новый `scan()`.
+
 #### Summary
+Короче говоря `switching, throttling, windowing and buffering` нужны в тех случаях, когда _backpressure_ не работает. В частности, когда мы имеем дело с юзерским вводом.
+
+-----
+
+### Flowables and Backpressure
+#### Understanding backpressure
+##### An example that needs backpressure
+#####Introducing the Flowable
+#####When to use Flowables and backpressure
+#####Use an Observable If...
+#####Use a Flowable If...
+####Understanding the Flowable and Subscriber
+#####The Subscriber
+####Creating a Flowable
+#####Using Flowable.create() and BackpressureStrategy
+#####Turning an Observable into a Flowable (and vice-versa)
+####Using onBackpressureXXX() operators
+#####onBackPressureBuffer()
+#####onBackPressureLatest()
+#####onBackPressureDrop()
+####Using Flowable.generate()
+####Summary
