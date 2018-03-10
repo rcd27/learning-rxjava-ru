@@ -170,6 +170,18 @@
         - onBackPressureDrop()
     - [Using Flowable.generate()]
 
+- [Chapter 9: Transformers and Custom Operators](#transformers-and-custom-operators)
+    - [Transformers](#transformers)
+        - ObservableTransformer
+        - FlowableTransformer
+        - Avoiding shared state with Transformers
+    - [Using to() for fluent conversion](#using-to-for-fluent-conversation)
+    - [Operators](#operators)
+        - Implementing an ObservableOperator
+        - FlowableOperator
+    - [Custom Transformers and operators for Singles, Maybes, and Completables](#custom-transformers-and-operators-for-singles-maybes-and-completables)
+    - [Using RxJava2-Extras and RxJava2Extensions](#using-rxjava2-extras-and-rxjava2extensions)
+
 -----
 
 ### Observables and Subscribers
@@ -1353,3 +1365,154 @@ Flowable.interval(1, TimeUnit.MILLISECONDS)
 ```java
 /*  честно, влом было переписывать эту дичь, см.книгу, стр.253 */
 ``` 
+
+-----
+
+### Transformers and Custom Operators
+В **RxJava** можно запилить собственные операторы с помощью методов `compose()` и `lift()`, оба есть и в `Observable` и `Flowable`. Чаще всего, желание собрать собственный велосипед будет посещать вас, когда вам вдруг захочется привнести какую-то новую логику в уже существующий оператор. В особенных случаях воспаления мозга, проявляется навязчивая идея сваять с нуля свой собственный оператор. В этой главе речь будет идти о том, как:
+    
+- Сочетать новые операторы с уже существующими, используя `compose()` и `Transformers`.
+- Использовать `to()`
+- Имплементить свои собственные костыли благодаря `lift()`
+- Понять, что такое `RxJava2-Extras` и `RxJava2Extensions`  
+
+#### Transformers
+Работая с эриксджавой, вы наверняка захотите переиспользовать какие-то куски `Observable` или `Flowable`. Хорошие разрабы находят способы переиспользования ранее написанного кода, и **RxJava** способствует такому подходу. Для этого в ней есть такие штуки, как `ObservableTransformer` и `FlowableTransformer`, которые можно подать в `compose()`.
+
+##### ObservableTransformer
+Мы ранее использовали пример с Google Guava `ImmutableList`'ом, когда собирали в него значения:
+
+```java
+    ...    
+    .collect(ImmutableList::builder, ImmutableList::add)
+    .map(ImmutableList.Builder::build)
+    ...
+```
+
+Логика, описанная в этих двух строчках, может понадобиться где-нибудь в другом месте. Чтобы не копипастить втупую, вспомним, что мы программисты и скомпонуем эти две операции.
+
+Спецом для таких дел был релизован `ObservableTransformer<T,R>`, который принимает `Observable<T>` в `apply()` и пробрасывает вниз по чейну другой `Observable<R>`. В нашей имплементации мы можем вернуть чейн , который добавляет все необходимые операторы к изначальному `OBservable`'у.
+
+Для примера с гуавовским листом, мы возьмём дженерик `T` для данного `Obsevable<T>`, а `R`'ом будет `ImmutableList<T>`, заэмиченный из `Observable<ImmutableList<T>>`. Поместим эту логику в `ObservableTransformer<T,ImmutableList<T>>`:
+
+```java
+public static <T> ObservableTransormer<T, ImmutableList<T>> toImmutableList() {
+    return new ObservableTransformer<T, ImmutableList<T>>() {
+        @Override
+        public ObservableSource<ImmutableList<T>>
+            apply(Observable<T> upstream) {
+
+            return upstream.collect(ImmutableList::<T>builder,
+                                    ImmutableList.Builder::add)
+                           .map(ImmutableList.Builder::build)
+                           .toObservable(); // переводим Single в обзёрвабл
+        }    
+    };
+}
+``` 
+
+Так как `collect()` возвращает сингл, надо перевести его в `Observable` - сигнатура метода обязывает.
+
+С лямбдой выглядит немного симпатичнее:
+
+```java
+public static <T> ObservableTransformer<T, ImmutableList<T>> toImmutableList() {
+    return upstream -> upstream.collect(ImmutableList::<T>builder,
+                                        ImmutableList.Builder::add)
+                               .map(ImmutableList::build)
+                               .toObservable();
+}
+```
+
+Для того, чтобы заюзать такой трансформер, надо передать его в `compose()`. Теперь его логику можно переиспользовать, шах и мат, грёбаные копипастеры!
+
+Не стремайтесь хранить `Transformers` в фабричных классах, это норм. `compose(GuavaTransformers.toImmutableList())` - и камон.
+
+> Для данного примера `toImmutableList()` можно было реализовать в виде переиспользуемого синглтона, так как он не принимает никаких параматров.
+
+Пример с стрингами:
+
+```java
+public static void main(String[] args) {
+    Observable.just("Вариант1", "Вариант2", "Вариант3")
+            .compose(joinToString("/"))
+            .subscribe(System.out::println);
+}
+
+public static ObservableTransformer<String, String>
+    joinToString(String separator) {
+        return upstream -> upstream.collect(StringBuilder::new, 
+                                            (b, s) -> {
+                                                if (b.length() == 0) {
+                                                    b.append(s);
+                                                } else {
+                                                    b.append(sepparator)
+                                                        .append(s);
+                                                }
+                                            })
+                                    .map(Stringbuilder::toString)
+                                    .toObservable();
+}
+
+>output:
+    Вариант1/Вариант2/Вариант3
+```
+
+##### FlowableTransformer
+Аналогично `ObservableTransformer`, только нужно организовать поддержку _backpressure_. В предыдущем примере просто меняем на `Flowable` и `toObservable()` -> `toFlowable()`. 
+
+##### Avoiding shared state with Transformers
+Избегайте передачи стэйта в трансформеры.
+
+Хороший способ выстрелить себе в ногу - передавать какое-то состояние в трансформеры. Любите сайд-эффекты, нетестируемость кода и дебажные брэйкпоинты? Как можно чаще передавайте стэйт в `Transformers`!
+
+Если нет, то избегайте передачи _mutable_ переменных в разные _subscriptions_. Если всё-таки надо держать какой-то стэйт в чейне, то можно использовать `.defer()`, который создаст новую переменную для каждого подписчика:
+
+```java
+static <T> ObservableTransformer<T, IndexedValue<T>> withIndex() {
+    return upstream -> Observable.defer( () -> {
+        AtomicInteger indexer = new AtomicInteger(-1);
+        
+        return upstream.map(v -> new IndexedValue<T>(indexer.incrementAndGet(),
+                                                        v));
+    });
+}
+```
+
+В целом избавьтесь от мыслей о том, чтобы добавлять в реактивщину изменяемые состояния и сайд-эффекты. Лучше не шарить _mutable_ объекты между подписчиками, только если бизнес не требует писать что-то, что может в любой момент сломаться.
+    
+#### Using to() for fluent conversion
+Оператор `to()` нужен для того, чтобы конвертить rx-ные штуки в что-то нереактивное. Принимает `Function<Observable<T>, R>` 
+
+Кусок из примера про `JavaFX`:
+```java
+Binding<String> binding = Observable.interval(1, TimeUnit.SECONDS)
+                            .map(i -> i.toString())
+                            .observeOn(JavaFxScheduler.platform())
+                            .to(JavaFxObserver::toBinding);
+
+// И теперь можем пользоваться в рамках JavaFX
+label.textProperty().bind(binding);
+```
+#### Operators
+На случай, если вдруг кто столкнулся с тем, что `Transformer`'ов не хватает, есть `ObservableOperator` и `FlowableOperator`, с помощью которых можно запилить свои собственные операторы.
+
+Но автор всё-таки советует сначала изучить возможности из-под-капотной **RxJava**. По его мнению даже поход на Stackoverflow и изучение вопроса - лучше, чем костылить свой велосипед. Комьюнити у эрыксджавы достаточно себе большое и отзывчивое.
+
+> Обратите внимние, в `RxJava2Extensions` (David Karnok) и `RxJava2-Extras` (Dave Moten) есть крутые трансформеры и операторы. Посмотрите эти либы, прежде чем обеспечивать себе rx-геморрой.
+
+##### Implementing an ObservableOperator
+Автор столько раз советовал не делать этого, что я решил пропустить всё, что связано с созданием своих операторов. Если кто упарывается по таким вещам, смотрите источник, мужики, ну его в жопу.
+
+##### FlowableOperator
+/* пропущено */
+
+#### Custom Transformers and operators for Singles, Maybes, and Completables
+Тут идея в том, что всё то же самое есть и для `Single`, `Maybe` и `Completable`. Если вдруг у них чего-то не хватает, переведите источник в `toObservable()` или `toFlowable()`. Создание трансформеров тоже не сильно отличается, просто возвращаемый тип меняется в соотв. с требованиями.
+
+#### Using RxJava2-Extras and RxJava2Extensions
+Если вы заинтересованы в том, чтобы добавить крутости стандартной эриксджаве, то рекомендуем ознакомиться с [RxJava2-Extras](https://github.com/davidmoten/rxjava2-extras) и [RxJava2Extensions](https://github.com/akarnokd/RxJava2Extensions).
+
+Вот, например,`toListWhile()` и `collectWhile()` - пара полезных операторов. Будут складывать в коллекцию элементы, соответствующие определённым условиям.
+
+Стоит потратить своё время на эти две либы, чтобы не изобретать то, что уже есть. Автору, вот например, нравится `cache()`, который может самоочищаться и переподписываться на эмишены.
