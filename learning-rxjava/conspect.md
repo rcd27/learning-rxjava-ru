@@ -198,6 +198,10 @@
     - [Manipulating time with the TestScheduler](#manipulating-time-with-the-testscheduler)
     - [Debugging RxJava code](#debugging-rxjava-code)
 
+- [Chapter 11: RxJava on Adroid](#rxjava-on-android)
+
+- [Chapter 12: Using RxJava for Kotlin New](#using-rxjava-for-kotlin-new)
+
 -----
 
 ### Observables and Subscribers
@@ -1678,3 +1682,23 @@ testObserver.assertValueCount(90);
 В IDEA брэйкпоинты отрабатывают и в лябмда-варажениях, поэтому никто не мешает дебажить ими.
 
 -----
+
+### RxJava on Adroid
+Автор приводит достаточно простые примеры по использованию эрыксджавы в Android, поэтому решено пропустить эту главу, в ней ничего особо интересного нет. Разве что перечисление Rx-библиотек для андроида:
+
+- [SqlBrite](https://github.com/square/sqlbrite) - rx-враппер для SQL
+- [RxLocation](https://github.com/patloew/RxLocation) - Reactive Location API
+- [rx-preferences](https://github.com/f2prateek/rx-preferences) - Reactive Shared Preferences
+- [RxFit](https://github.com/patloew/RxFit) - 0o
+- [RxWear](https://github.com/patloew/RxWear)
+- [ReactiveNetwork](https://github.com/pwittchen/ReactiveNetwork) - реактивно слушает сеть
+- [ReactiveBeacons](https://github.com/pwittchen/ReactiveBeacons) - про **Bluetooth Low Energy**.
+
+Ну ещё автор предупреждает о том, что надо особенное внимение уделить контролю жизненного цикла обзёрваблов, высвобождать их и прочее. В `onPause()` - диспозить, подписываться заново в `onResume()`. Неплохо диспозить и в `onDestroy()` тоже.
+
+Не стоит забывать о мультикасте, когда нужно создать несколько слушателей для одного и того же источника. Делаешь много `Observer`'ов для одного и того же ивента - юзай мультикастинг.
+
+-----
+
+### Using RxJava for Kotlin New
+/* Конпект этой главы откладывается до момента, когда я буду пересаживаться на котёл */ 
