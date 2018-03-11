@@ -182,6 +182,22 @@
     - [Custom Transformers and operators for Singles, Maybes, and Completables](#custom-transformers-and-operators-for-singles-maybes-and-completables)
     - [Using RxJava2-Extras and RxJava2Extensions](#using-rxjava2-extras-and-rxjava2extensions)
 
+- [Chapter 10: Testing and Debugging](#testing-and-debugging)
+    - [Configuring JUnit](#configuring-junit)
+    - [Blocking subscribers](#blocking-subscribers)
+    - [Blocking operators](#blocking-operators)
+        - blockingFirst()
+        - blockingGet()
+        - blockingLast()
+        - blockingIterable()
+        - blockingForEach()
+        - blockingNext()
+        - blockingLatest()
+        - blockingMostRecent()
+    - [Using TestObserver and TestSubscriber](#using-testobserver-and-testsubscriber)
+    - [Manipulating time with the TestScheduler](#manipulating-time-with-the-testscheduler)
+    - [Debugging RxJava code](#debugging-rxjava-code)
+
 -----
 
 ### Observables and Subscribers
@@ -1516,3 +1532,149 @@ label.textProperty().bind(binding);
 Вот, например,`toListWhile()` и `collectWhile()` - пара полезных операторов. Будут складывать в коллекцию элементы, соответствующие определённым условиям.
 
 Стоит потратить своё время на эти две либы, чтобы не изобретать то, что уже есть. Автору, вот например, нравится `cache()`, который может самоочищаться и переподписываться на эмишены.
+
+-----
+
+### Testing and Debugging
+Тестирование реактивщины на первый взгляд может показаться непростым. Это так потому, что **RxJava** - про поведение, а не про состояние. И всё же с этим можно что-то поделать. Будем использовать **JUnit**.
+
+Также в этой главе будет выделено место для дебага. Он перестаёт быть таким однозначным при использовании эриксджавы: стэктрэйсы менее информативны и не совсем понятно, куда ставить брэйкпоинты. Но при правильном подходе всё будет норм. Появление проблем становится довольно линейным и их поиск не составляет большого труда.
+
+Чё будет:
+
+- `blockingSubscribe()`
+- блокирующие операторы
+- `TestObserver` и `TestSubdcriber`
+- `TestScheduler`
+- стратегии дебага
+
+#### Configuring JUnit
+
+/* Подозреваю, что подключить JUnit - не проблема, пропускаю */
+
+#### Blocking subscribers
+Почти во всех примерах в книге были использованы искусственные способы замораживания главного потока. Делалось это для того, чтобы rx-чейн успевал отработать до того, как приложуха завершит своё выполнение.
+
+В случае с юнит-тестами часто выходит так, что один тест должен выполниться прежде, чем стартанёт другой. Чтобы избежать путаницы с разными потоками, надо блокировать выполнение теста перед тем, как отработает `Observable` или `Flowable`.
+
+```java
+AtomicInteger hitCount = new AtomicInteger();
+
+Observable<Long> source = Observable.interval(1, TimeUnit.SECONDS)
+                                    .take(5);
+
+source.blockingSubscribe(i -> hitcount.incrementAndGet());
+
+assertTrue(hitcount.get() == 5);
+```
+
+`blockingSubscribe()` - самый простой оператор для тестирования вашей реактивной логики. Однако, есть более элегантные инструменты. 
+
+> Убедитесь, что ваш чейн не является бесконечным, прежде чем впиливать `blockingSubscribe()`. Также не рекомендуется использовать его в боевом коде - это может негативно сказаться на реактивности вашей приложухи.
+
+#### Blocking operators
+Есть целый набор операторов, которые ещё не обсуждались. Так называемые _blocking operators_(блокирующие операторы) - прокси между реактивным миром и скучной императивщиной. Они блокируют выполнение thread'a до тех пор, пока не отработает rx-чейн.
+
+Использование блокирующих операторов в коде порождает анти-паттерны, так что атата.
+
+Для полноценного тестирования также понадобятся `TestSubscriber` и `TestObserver`, о которых будет сказано позже.
+
+##### blockingFirst()
+Используется вместо `subscribe()` или `blockingSubscribe()` и возвращает конкретный элемент `T`, а не `Observable<T>`. Блокирует поток до тех пор, пока чейн не вернёт первый элемент. Бросает ошибку, если до него не докатилось ни одного эмишена. Аналогично работает и `blockingSingle()`.
+
+##### blockingGet()
+У `Maybe` и `Single` нет `blockingFirst()`, потому как они подразумевают 0 <= количество элементов <= 1. Логично, что подобный оператор будет возвращать _единственный_ элемент. Называется он `blockingGet()`.
+
+##### blockingLast()
+/* Д - дедукция */
+
+##### blockingIterable()
+Интересный блокирующий оператор, который возвращает эмишены в виде `Iterable<T>`. Итератор, предоставленный этим `Iterable<T>` будет блокировать итерирующий поток до тех пор, пока не будет доступен следующий элемент. Итерация завершится `onComplete()`.
+
+```java
+Observable<String> source = Observable.just("Vote", "for", "Grudinin");
+
+Iterable<String> allWithLengthFour = source.filter(s -> s.length() == 4)
+                                            .blockingIterable();
+
+for (String s: allWithLengthFour) {
+    assertTrue(s.length() == 4);
+}
+```
+
+`blockingIterable()` поставит в очередь все полученные элементы до тех пор, пока `Iterator` не сможет их обработать. Может привести к `OutOfMemoryException`.
+
+Может быть полезным для работы с работы с джавовскими стримами(гляньте [RxJava2Jdk8Interop](https://github.com/akarnokd/RxJava2Jdk8Interop)) или котлиновскими _sequence_. 
+
+##### blockingForEach()
+Блокирует поток, вызывающий чейн, для каждого элемента: он будет ждать, пока выстрелит каждый эмишн. Так, для предыдущего примера можно написать:
+
+```
+source.filter(s -> s.length() == 4)
+        .blockingForEach(s -> assertTrue(s.length() == 4));
+```  
+
+##### blockingNext()
+Вернёт `Iterable<T>` и будет блочить метод `next()` у каждого запроса к итератору. Эмишены перед первым и после последнего вызовов `next()` будут проигнорированы.
+
+##### blockingLatest()
+Запрашивает последний выпущенный элемент.
+
+##### blockingMostRecent()
+Какая-то дичь ненужная. 
+
+#### Using TestObserver and TestSubscriber
+Настоящие rx-ниндзи используют всю силу реактивщины, даже в тестировании. Им недостаточно просто заблочить исполняющий поток до тех пор, пока не отработает чейн. Они хотят прописать логику для `onNext()`, `onError()`, `onComplete()`.
+
+Они познали `TestObserver` и `TestSubscriber` - их тестовые rx-сюрикены. Первый для `Observable` источников, второй - для `Flowable`.
+
+Методы `TestObserver`:
+
+Метод | Описание
+-----|-----
+`assertNotSubscribed()` | Проверка на отсутствие подписчиков
+`subscribe()` | Обычный `subscribe()`
+`assertSubscribed()` | Проверка на наличие подписчиков
+`awaitTerminalEvent()` | Блокировка и ожидание, пока отработает `Observable`
+`assertComplete()` | Отработал ли `onComplete()`
+`assertNoErrors()` | Не было ли ошибок
+`assertValueCount(N)` | Проверка на `количество полученных значений` == `N`
+`assertValues(0L, 1L, 2L)` | Полученные значения: `OL`, `1L`, `2L`
+
+Это немногие методы из арсенала тестового обзёрвера. Большинство из них возвращает `TestObserver`, поэтому можно составлять целые тестовые чейны.
+
+> Использование `TestObserver` и `TestSubscriber` предпочтительнее использования блокирующих операторов - тестирование проходит с учётом жизненного цикла обзёрваблов и всего спектра ивентов, которые могут произойти в чейне. 
+
+#### Manipulating time with the TestScheduler
+Если у нас много чейнов, основанных на времени, то их тестирование с помощью блокирующих операторов может стать слишком долгим. `TestScheduler` придуман для того, чтобы симмулировать нужные временные отрезки. С его помощью можно как бы промотать вперёд выполнение чейна, чтобы узнать результат его работы.
+
+В примере ниже у нас есть обзёрвабл, который эмитит 90 элементов за 90 минут. Вместо того, чтобы ждать его выполнение полтора часа, мы используем необходимый тестовый обзёрвер:
+
+```java
+TestScheduler testScheduler = new TestScheduler();
+
+TestObserver<Long> testObserver = new TestObserver<>();
+
+// Скажем нашему обзёрваблу, чтобы он работал на правильном шедулере
+Observable<Long> minuteTicker = Observable.interval(1, TimeUnit.MINUTES,
+                                                                testScheduler);
+
+minuteTicker.subscribe(testObserver);
+
+// Мотанём шедулер вперёд
+testScheduler.advanceTimeBy(90, TimeUnit.MINUTES);
+
+// Тест пройдёт нормально
+testObserver.assertValueCount(90);
+```
+
+Есть ещё такой оператор, как `advanceTimeTo()`, который прыгает к точному времени с момента подписки.
+
+Тестовый шедулер не является потокобезопасным, поэтому не стоит его юзать, когда вам нужна реальная многопоточность. При использовании каких-то сложных чейнов, которые работают там-сям, используйте `RxJavaPlugins.setComputationScheduler()` и аналогичные ему методы для того, чтобы инжектить нужный вам шедулер.
+
+#### Debugging RxJava code
+Для дебага достаточно придерживаться определённого подхода, чтобы достаточно быстро и безболезненно находить косяки в чейнах. Используйте `doOnNext()` сразу после источника эмишенов, чтобы понимать, какие элементы были выпущены дельше в чейн, а какие привели к ошибке. Постепенное продвижение `doOnNext()` вниз по цепочке рано или поздно даст свои плоды, и вы нащупаете проблемный код.
+
+В IDEA брэйкпоинты отрабатывают и в лябмда-варажениях, поэтому никто не мешает дебажить ими.
+
+-----
