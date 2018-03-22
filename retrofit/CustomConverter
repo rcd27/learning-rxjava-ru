@@ -1,0 +1,53 @@
+public class CustomConverter {
+
+    private final Api api;
+
+    @Inject
+    ApiProvider(@NonNull OkHttpClient okHttpClient,
+                @NonNull @ServerUrl String serverUrl) {
+
+        api = new Retrofit.Builder()
+                .client(okHttpClient)
+                .baseUrl(serverUrl)
+                .addConverterFactory(new EnvelopingConverter())
+                .addConverterFactory(GsonConverterFactory.create())
+                .addCallAdapterFactory(RxJava2CallAdapterFactory.createWithScheduler(Schedulers.io()))
+                .build()
+                .create(Api.class);
+    }
+
+     /**
+     * This is what all of our API responses are wrapped in.
+     *
+     * @param <T> actual data that we need
+     */
+    private static class Envelope<T> {
+        boolean success;
+        T data;
+        String error;
+    }
+
+    static class EnvelopingConverter extends Converter.Factory {
+        @Nullable
+        @Override
+        public Converter<ResponseBody, ?> responseBodyConverter(Type type,
+                                                                Annotation[] annotations,
+                                                                Retrofit retrofit) {
+
+            Type envelopedType = TypeToken.getParameterized(Envelope.class, type).getType();
+
+            Converter<ResponseBody, Envelope<?>> delegate = retrofit.nextResponseBodyConverter(
+                    this, envelopedType, annotations);
+
+            return body -> {
+                Envelope<?> envelope = delegate.convert(body);
+                /**
+                 * We can handle {@link Envelope#error} here for example.
+                 * Now we just say next converter(GsonConverter in our case) to deserialize
+                 * {@link Envelope#data}
+                 */
+                return envelope.data;
+            };
+        }
+    }
+}
