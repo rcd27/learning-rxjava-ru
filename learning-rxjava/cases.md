@@ -161,4 +161,9 @@ Observable.fromCallable({ api.getEvents().execute() })
 }
 ```
 
+#### Disposing
+https://github.com/trello/RxLifecycle
+
+> Tip: `Object onRetainNonConfigurationInstance()` - можно сохранить поле и получить его после пересоздания
+Activity с помощью вызова `getLastNonConfigurationInstance()`
 
