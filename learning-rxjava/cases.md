@@ -1,4 +1,4 @@
-Here are some examples by [Stephen D'Amico at DroidCon 2017](https://www.youtube.com/watch?v=q4eK3VFhnA0&feature=youtu.be)
+Here are some examples by [Stephen D'Amico](https://github.com/sddamico) at [DroidCon 2017](https://www.youtube.com/watch?v=q4eK3VFhnA0&feature=youtu.be)
 
 #### Retrying requests
 - `retryWhen()`
