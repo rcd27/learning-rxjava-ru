@@ -1,4 +1,4 @@
-Here are some examples by (Stephen D'Amico at DroidCon 2017)[https://www.youtube.com/watch?v=q4eK3VFhnA0&feature=youtu.be]
+Here are some examples by [Stephen D'Amico at DroidCon 2017](https://www.youtube.com/watch?v=q4eK3VFhnA0&feature=youtu.be)
 
 #### Retrying requests
 - `retryWhen()`
@@ -80,6 +80,43 @@ state.subscribe(requestState -> {
                       break;
                 }
             });
+```
+
+- Разносим UI и запросы в сеть ещё дальше:
+```java
+class ApiRequest {
+BehaviorRelay<RequestState> state = 
+  BehaviorRelay.create(RequestState.IDLE);
+BehaviorRelay<EventsResponse> response = BehaviorRelay.create();
+BehaviorRelay<Throwable> errors = BehaviorRelay.create();
+BehaviorRelay<Long> trigger = BehaviorRelay.create();
+
+public ApiRequest() {
+    trigger
+      .doOnNext(() -> state.call(RequestState.LOADING))
+      .observeOn(Schedulers.io())
+      .flatMap(trigger -> api.getEvents())
+      .doOnError(t -> state.call(RequestState.ERROR))
+      .doOnError(errors)
+      .onErrorResumeNext(Observable.empty())
+      .doOnNext(() -> state.call(RequestState.COMPLETE))
+      .subscribe(response);
+  }
+
+  void execute() {
+    trigger.call(System.currentTimeMillis());
+  }
+}
+
+// где-то ближе к UI слою
+ApiRequest request = new ApiRequest(api.getEvents());
+
+request.state.subscribe(state -> updateLoadingView(state));
+request.state.subscribe(state -> updateLoadingNotification(state));
+request.response.subscribe(eventsResponse -> showEvents(eventsResponse))
+request.errors.subscribe(t -> showError(t));
+
+request.execute();
 ```
 
 
