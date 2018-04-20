@@ -138,6 +138,27 @@ class RequestViewModel {
 Observable.combineLatest(state, response, errors, RequestViewModell::new)
   .subscribe(viewModel -> {..});
 ```
+А сейчас немного Котлина:
+```kotlin
+sealed class RequestState {
+  object Loading : RequestState()
+  data class Complete(val response: EventsResponse) : RequestState()
+  data class Error(val error: Throwable) : RequestState()
+}
 
+Observable.fromCallable({ api.getEvents().execute() })
+  .subscribeOn(..)
+  .startWith(RequestState.Loading)
+  .onErrorReturn { RequestState.Error(it) }
+  .observeOn(..)
+  .subscribe { requestState ->
+    when (requestState) {
+      is Idle -> clearView()
+      is Loading -> showLoading()
+      is Completed -> ..
+      is Error -> showError(requestState.error)
+    }
+}
+```
 
 
