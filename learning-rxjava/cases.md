@@ -118,6 +118,26 @@ request.errors.subscribe(t -> showError(t));
 
 request.execute();
 ```
+Вот как можно ещё обыграть:
+```java
+BehaviorRelay<RequestState> state = BehaviorRelay.create(RequestState.IDLE);
+BehaviorRelay<Optional<EventsResponse>> response = 
+  BehaviorRelay.create(Optional.absent());
+BehaviorRelay<Optional<Throwable>> errors =
+  BehaviorRelay.create(Optional.absent());
+  
+class RequestViewModel {
+  public final RequestState state;
+  public final Optional<EventsResponse> response;
+  public final Optional<Throwable> errors;
+  
+  RequestViewModel(..) {..}
+}
+
+// Теперь у нас есть одна подписка, которая тригериться, когда один из обзёрваблов эмитит (уточнить)
+Observable.combineLatest(state, response, errors, RequestViewModell::new)
+  .subscribe(viewModel -> {..});
+```
 
 
 
