@@ -1,0 +1,45 @@
+import java.util.Arrays;
+
+public class AlgSolution {
+
+  static int MAX = 26;
+
+  public static void main(String[] args) {
+    String a[] = {"cdab", "dcba"};
+    String b[] = {"abcd", "abcd"};
+    System.out.print(Arrays.toString(countTwins(a, b)));
+  }
+
+  static String encodeString(String s) {
+    int[] hashEven = new int[MAX];
+    int[] hashOdd = new int[MAX];
+
+    for (int i = 0; i < s.length(); i++) {
+      char current = s.charAt(i);
+      if (i % 2 != 0) {
+        hashOdd[current - 'a']++;
+      } else {
+        hashEven[current - 'a']++;
+      }
+    }
+
+    StringBuilder encoded = new StringBuilder();
+    for (int i = 0; i < MAX; i++) {
+      encoded.append(hashEven[i]);
+      encoded.append('-');
+      encoded.append(hashOdd[i]);
+      encoded.append('-');
+    }
+
+    return encoded.toString();
+  }
+
+  static boolean[] countTwins(String a[], String b[]) {
+    boolean[] result = new boolean[a.length];
+
+    for (int i = 0; i < a.length; i++) {
+      result[i] = encodeString(a[i]).equals(encodeString(b[i]));
+    }
+    return result;
+  }
+}
