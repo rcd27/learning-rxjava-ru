@@ -1,0 +1,54 @@
+public class Algo {
+
+  public static void main(String[] args) {
+    String[] expressions1 = new String[]{"<>>>", "<>>>>"};
+    int[] maxReplacements1 = new int[]{2, 2};
+    System.out.println(Arrays.toString(balancedOrNot(expressions1, maxReplacements1)));
+  }
+
+  private static int[] balancedOrNot(String[] expressions, int[] maxReplacements) {
+    int[] result = new int[expressions.length];
+    for (int i = 0; i < expressions.length; i++) {
+      int balanceResult = balance(expressions[i]);
+      switch (balanceResult) {
+        case -1:
+          result[i] = 0;
+          break;
+        case 0:
+          result[i] = 1;
+          break;
+        default:
+          if (balanceResult <= maxReplacements[i]) {
+            result[i] = 1;
+          } else {
+            result[i] = 0;
+          }
+      }
+    }
+    
+    return result;
+  }
+
+  private static int balance(String symbolString) {
+    Stack<Character> stack = new Stack<>();
+
+    int balanceCount = 0;
+    for (int i = 0; i < symbolString.length(); i++) {
+      char symbol = symbolString.charAt(i);
+      if (symbol == '<') {
+        stack.push(symbol);
+      } else {
+        if (stack.empty()) {
+          balanceCount++;
+        } else {
+          stack.pop();
+        }
+      }
+    }
+    if (!stack.empty() && stack.lastElement() == '<') {
+      balanceCount = -1;
+    }
+
+    return balanceCount;
+  }
+}
