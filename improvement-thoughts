@@ -1,0 +1,30 @@
+@EmptyPublicConstructor // <- MVP
+@NewInstance(WalletViewHolder.WalletViewObject.class) // 2nd target
+public class WalletDetailsFragment extends BaseFragment implements DetailsView {
+
+  private static final String WALLET = "WALLET";
+  @SuppressWarnings("WeakerAccess")
+  @InjectPresenter
+  DetailsPresenter presenter;
+  private ViewGroup actionsContainer;
+  private String currentCurrency;
+
+  public WalletDetailsFragment() { // to avoid this (simply generate)
+    // Empty constructor.
+  }
+
+  public static WalletDetailsFragment newInstance( // and this
+      @NonNull WalletViewHolder.WalletViewObject wallet) {
+
+    Scope walletScope = Toothpick.openScopes(Scopes.MAIN_ACTIVITY_SCOPE, Scopes.WALLET_SCOPE);
+    walletScope.installModules(new WalletModule(wallet));
+
+    Bundle data = new Bundle();
+    data.putSerializable(WALLET, wallet);
+    WalletDetailsFragment fragment = new WalletDetailsFragment();
+    fragment.setArguments(data);
+
+    return fragment;
+  }
+  ...
+}
