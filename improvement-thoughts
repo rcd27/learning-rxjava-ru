@@ -16,9 +16,6 @@ public class WalletDetailsFragment extends BaseFragment implements DetailsView {
   public static WalletDetailsFragment newInstance( // and this
       @NonNull WalletViewHolder.WalletViewObject wallet) {
 
-    Scope walletScope = Toothpick.openScopes(Scopes.MAIN_ACTIVITY_SCOPE, Scopes.WALLET_SCOPE);
-    walletScope.installModules(new WalletModule(wallet));
-
     Bundle data = new Bundle();
     data.putSerializable(WALLET, wallet);
     WalletDetailsFragment fragment = new WalletDetailsFragment();
