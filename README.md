@@ -1,4 +1,4 @@
-##### [learning-rxjava](https://github.com/rcd27/learning-rx-java-ru/tree/master/learning-rxjava)
+##### [learning-rxjava-ru](https://github.com/rcd27/learning-rx-java-ru/tree/master/learning-rxjava)
 
 <ul>
 <img src="https://github.com/rcd27/learning-rxjava-ru/blob/master/learning-rxjava.jpg" width="250">
