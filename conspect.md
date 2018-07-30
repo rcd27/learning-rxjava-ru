@@ -3,7 +3,7 @@
 Это конспект-перевод книги Томаса Нилда "Learning RxJava", 2017
 
 <ul>
-<img src="https://github.com/rcd27/workbook/blob/master/learning-rxjava/learning-rxjava.jpg" width="250">
+<img src="https://github.com/rcd27/learning-rxjava-ru/blob/master/learning-rxjava.jpg" width="250">
 </ul>
 
 -----
