@@ -1,10 +1,10 @@
 #### What's this about?
 It's just a place for making notes about learning technologies, libs and frameworks which are new for me.
 
-##### 1. [learning-rxjava](https://github.com/rcd27/workbook/tree/master/learning-rxjava)
+##### 1. [learning-rxjava](https://github.com/rcd27/learning-rx-java-ru/tree/master/learning-rxjava)
 
 <ul>
-<img src="https://github.com/rcd27/workbook/blob/master/learning-rxjava/learning-rxjava.jpg" width="250">
+<img src="https://github.com/rcd27/learning-rxjava-ru/blob/master/learning-rxjava/learning-rxjava.jpg" width="250">
 </ul>
 
 My [conspect](https://github.com/rcd27/workbook/blob/master/learning-rxjava/conspect.md) 
