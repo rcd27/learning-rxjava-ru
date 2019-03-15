@@ -1,4 +1,5 @@
 ##### <b>Learning RxJava in Russian</b>
+##### <b>Learning RxJava на русском</b>
 
 <ul>
 <img src="https://github.com/rcd27/learning-rxjava-ru/blob/master/learning-rxjava.jpg" width="250">
